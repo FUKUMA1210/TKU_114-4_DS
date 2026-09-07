@@ -1,168 +1,117 @@
-final class WalletTransaction {
-    private final int sequence;
-    private final String type;
-    private final int amount;
-    private final int balanceAfter;
+class DigitalWallet {
+    private String walletId;
+    private String owner;
+    private int balance;
+    private int transactionCount;
 
-    WalletTransaction(int sequence, String type, int amount, int balanceAfter) {
-        this.sequence = sequence;
-        this.type = type;
-        this.amount = amount;
-        this.balanceAfter = balanceAfter;
+    public DigitalWallet(String walletId, String owner, int balance) {
+        this.walletId = walletId;
+        this.owner = owner;
+
+        if (balance < 0) {
+            this.balance = 0;
+        } else {
+            this.balance = balance;
+        }
+
+        this.transactionCount = 0;
     }
 
-    int getSequence() {
-        return sequence;
+    public boolean deposit(int amount) {
+        if (amount <= 0) {
+            return false;
+        }
+
+        balance += amount;
+        transactionCount++;
+        return true;
     }
 
-    String getType() {
-        return type;
+    public boolean payment(int amount) {
+        if (amount <= 0) {
+            return false;
+        }
+
+        if (amount > balance) {
+            return false;
+        }
+
+        balance -= amount;
+        transactionCount++;
+        return true;
     }
 
-    int getAmount() {
-        return amount;
+    public boolean refund(int amount) {
+        if (amount <= 0) {
+            return false;
+        }
+
+        balance += amount;
+        transactionCount++;
+        return true;
+    }
+
+    public String getWalletId() {
+        return walletId;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public int getBalance() {
+        return balance;
+    }
+
+    public int getTransactionCount() {
+        return transactionCount;
     }
 
     @Override
     public String toString() {
-        return sequence + " " + type + " " + amount
-                + " balance=" + balanceAfter;
-    }
-}
-
-class HistoryWallet {
-    private final String walletId;
-    private final String owner;
-    private int balance;
-    private final WalletTransaction[] transactions;
-    private int transactionCount;
-
-    HistoryWallet(String walletId, String owner, int historyCapacity) {
-        this.walletId = walletId == null || walletId.isBlank()
-                ? "UNKNOWN" : walletId;
-        this.owner = owner == null || owner.isBlank()
-                ? "Unknown" : owner;
-        balance = 0;
-        transactions = new WalletTransaction[Math.max(1, historyCapacity)];
-        transactionCount = 0;
-    }
-
-    boolean deposit(int amount) {
-        if (amount <= 0 || transactionCount >= transactions.length) {
-            return false;
-        }
-
-        balance += amount;
-        record("DEPOSIT", amount);
-        return true;
-    }
-
-    boolean pay(int amount) {
-        if (amount <= 0 || amount > balance
-                || transactionCount >= transactions.length) {
-            return false;
-        }
-
-        balance -= amount;
-        record("PAY", amount);
-        return true;
-    }
-
-    boolean refund(int amount) {
-        if (amount <= 0 || transactionCount >= transactions.length) {
-            return false;
-        }
-
-        balance += amount;
-        record("REFUND", amount);
-        return true;
-    }
-
-    private void record(String type, int amount) {
-        transactions[transactionCount] =
-                new WalletTransaction(
-                        transactionCount + 1,
-                        type,
-                        amount,
-                        balance);
-
-        transactionCount++;
-    }
-
-    WalletTransaction findTransaction(int sequence) {
-        for (int i = 0; i < transactionCount; i++) {
-            if (transactions[i].getSequence() == sequence) {
-                return transactions[i];
-            }
-        }
-        return null;
-    }
-
-    int totalByType(String type) {
-        int total = 0;
-
-        for (int i = 0; i < transactionCount; i++) {
-            if (transactions[i].getType().equals(type)) {
-                total += transactions[i].getAmount();
-            }
-        }
-
-        return total;
-    }
-
-    boolean transferTo(HistoryWallet target, int amount) {
-        if (target == null || target == this
-                || amount <= 0 || amount > balance) {
-            return false;
-        }
-
-        if (transactionCount >= transactions.length
-                || target.transactionCount >= target.transactions.length) {
-            return false;
-        }
-
-        balance -= amount;
-        target.balance += amount;
-
-        record("TRANSFER_OUT", amount);
-        target.record("TRANSFER_IN", amount);
-
-        return true;
-    }
-
-    void printStatement() {
-        System.out.println(walletId + " owner=" + owner
-                + " balance=" + balance);
-
-        for (int i = 0; i < transactionCount; i++) {
-            System.out.println(transactions[i]);
-        }
+        return "錢包編號：" + walletId
+                + "，持有人：" + owner
+                + "，餘額：" + balance
+                + "，交易次數：" + transactionCount;
     }
 }
 
 public class DigitalWalletSystem {
     public static void main(String[] args) {
-        HistoryWallet wallet1 =
-                new HistoryWallet("W001", "Amy", 5);
+        DigitalWallet wallet =
+                new DigitalWallet("W001", "小明", 1000);
 
-        HistoryWallet wallet2 =
-                new HistoryWallet("W002", "Bob", 5);
+        System.out.println("初始資料：");
+        System.out.println(wallet);
 
-        System.out.println("deposit=" + wallet1.deposit(1000));
-        System.out.println("pay 250=" + wallet1.pay(250));
-        System.out.println("pay 900=" + wallet1.pay(900));
-        System.out.println("refund=" + wallet1.refund(50));
+        System.out.println();
 
-        System.out.println("transfer="
-                + wallet1.transferTo(wallet2, 300));
+        System.out.println("正常儲值 500：");
+        System.out.println("交易結果：" + wallet.deposit(500));
+        System.out.println(wallet);
 
-        System.out.println("find="
-                + wallet1.findTransaction(1));
+        System.out.println();
 
-        System.out.println("PAY total="
-                + wallet1.totalByType("PAY"));
+        System.out.println("正常付款 800：");
+        System.out.println("交易結果：" + wallet.payment(800));
+        System.out.println(wallet);
 
-        wallet1.printStatement();
-        wallet2.printStatement();
+        System.out.println();
+
+        System.out.println("餘額不足付款 1000：");
+        System.out.println("交易結果：" + wallet.payment(1000));
+        System.out.println(wallet);
+
+        System.out.println();
+
+        System.out.println("負數金額儲值 -100：");
+        System.out.println("交易結果：" + wallet.deposit(-100));
+        System.out.println(wallet);
+
+        System.out.println();
+
+        System.out.println("退款 200：");
+        System.out.println("交易結果：" + wallet.refund(200));
+        System.out.println(wallet);
     }
 }

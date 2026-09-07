@@ -42,9 +42,9 @@ class DigitalWallet {
                 ? "UNKNOWN" : walletId;
         this.owner = owner == null || owner.isBlank()
                 ? "Unknown" : owner;
-        balance = 0;
-        transactions = new WalletTransaction[Math.max(1, historyCapacity)];
-        transactionCount = 0;
+        this.balance = 0;
+        this.transactions = new WalletTransaction[Math.max(1, historyCapacity)];
+        this.transactionCount = 0;
     }
 
     boolean deposit(int amount) {
@@ -78,18 +78,13 @@ class DigitalWallet {
         return true;
     }
 
-    private void record(String type, int amount) {
-        transactions[transactionCount] = new WalletTransaction(
-                transactionCount + 1, type, amount, balance);
-        transactionCount++;
-    }
-
     WalletTransaction findTransaction(int sequence) {
         for (int i = 0; i < transactionCount; i++) {
             if (transactions[i].getSequence() == sequence) {
                 return transactions[i];
             }
         }
+
         return null;
     }
 
@@ -106,11 +101,15 @@ class DigitalWallet {
     }
 
     boolean transferTo(DigitalWallet target, int amount) {
-        if (target == null || target == this || amount <= 0 || amount > balance) {
+        if (target == null || amount <= 0 || amount > balance) {
             return false;
         }
 
-        if (transactionCount >= transactions.length || target.transactionCount >= target.transactions.length) {
+        if (transactionCount >= transactions.length) {
+            return false;
+        }
+
+        if (target.transactionCount >= target.transactions.length) {
             return false;
         }
 
@@ -121,6 +120,12 @@ class DigitalWallet {
         target.record("TRANSFER_IN", amount);
 
         return true;
+    }
+
+    private void record(String type, int amount) {
+        transactions[transactionCount] = new WalletTransaction(
+                transactionCount + 1, type, amount, balance);
+        transactionCount++;
     }
 
     void printStatement() {
@@ -135,27 +140,38 @@ class DigitalWallet {
 
 public class WalletHistoryManager {
     public static void main(String[] args) {
-        DigitalWallet wallet1 =
-                new DigitalWallet("W001", "Amy", 5);
+        DigitalWallet wallet1 = new DigitalWallet("W001", "Amy", 5);
+        DigitalWallet wallet2 = new DigitalWallet("W002", "Bob", 5);
 
-        DigitalWallet wallet2 =
-                new DigitalWallet("W002", "Bob", 5);
-
-        System.out.println("deposit=" + wallet1.deposit(1000));
-        System.out.println("pay 250=" + wallet1.pay(250));
-        System.out.println("pay 900=" + wallet1.pay(900));
-        System.out.println("refund=" + wallet1.refund(50));
+        wallet1.deposit(1000);
+        wallet1.pay(200);
+        wallet1.refund(50);
 
         System.out.println("transfer="
                 + wallet1.transferTo(wallet2, 300));
 
-        System.out.println("find="
-                + wallet1.findTransaction(1));
+        System.out.println();
+
+        WalletTransaction transaction =
+                wallet1.findTransaction(2);
+
+        System.out.println("findTransaction(2)=" + transaction);
+
+        System.out.println("DEPOSIT total="
+                + wallet1.totalByType("DEPOSIT"));
 
         System.out.println("PAY total="
                 + wallet1.totalByType("PAY"));
 
+        System.out.println("TRANSFER_OUT total="
+                + wallet1.totalByType("TRANSFER_OUT"));
+
+        System.out.println();
+        System.out.println("=== Wallet 1 ===");
         wallet1.printStatement();
+
+        System.out.println();
+        System.out.println("=== Wallet 2 ===");
         wallet2.printStatement();
     }
 }
